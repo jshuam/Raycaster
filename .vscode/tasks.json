@@ -1,0 +1,48 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "[DEBUG] MinGW 64 CMake",
+			"command": "C:/msys64/mingw64/bin/cmake.exe",
+			"args": [
+				"-DCMAKE_BUILD_TYPE=Debug",
+				"-G",
+				"'MSYS Makefiles'",
+				"../.."
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/build/debug"
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "MinGW 64 Make",
+			"command": "C:/msys64/mingw64/bin/mingw32-make.exe",
+			"options": {
+				"cwd": "${workspaceFolder}/build/debug"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"label": "Generate compile_commands.json",
+			"command": "C:/msys64/mingw64/bin/cmake.exe",
+			"args": [
+				"-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
+				"-G",
+				"'MinGW Makefiles'",
+				"../.."
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/build/clangd"
+			},
+			"problemMatcher": []
+		}
+	]
+}

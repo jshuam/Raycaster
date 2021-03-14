@@ -1,0 +1,12 @@
+[
+{
+  "directory": "C:/msys64/home/Josh/dev/raycaster/build/clangd",
+  "command": "C:\\msys64\\mingw64\\bin\\gcc.exe  @CMakeFiles/GLAD.dir/includes_C.rsp  -o CMakeFiles\\GLAD.dir\\extern\\glad\\src\\glad.c.obj -c C:\\msys64\\home\\Josh\\dev\\raycaster\\extern\\glad\\src\\glad.c",
+  "file": "C:/msys64/home/Josh/dev/raycaster/extern/glad/src/glad.c"
+},
+{
+  "directory": "C:/msys64/home/Josh/dev/raycaster/build/clangd",
+  "command": "C:\\msys64\\mingw64\\bin\\g++.exe  @CMakeFiles/raycaster.dir/includes_CXX.rsp  -o CMakeFiles\\raycaster.dir\\src\\main.cpp.obj -c C:\\msys64\\home\\Josh\\dev\\raycaster\\src\\main.cpp",
+  "file": "C:/msys64/home/Josh/dev/raycaster/src/main.cpp"
+}
+]
