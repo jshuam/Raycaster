@@ -23,11 +23,11 @@ const char mapLayout[] = "0000000000000000"
                          "0    111111111 0"
                          "0            1 0"
                          "0            1 0"
-                         "0  11111111111 0"
-                         "0   11111111   0"
-                         "0    1    1    0"
-                         "0              0"
-                         "0000000000000000";
+                         "2  11111111111 0"
+                         "2   11111111   0"
+                         "2    1    1    0"
+                         "2              0"
+                         "0333000000000000";
 
 const float quad[] = {
     0.0f, 1.0f,
@@ -49,7 +49,9 @@ GLuint colorLoc = 0;
 SDL_Window* gWindow;
 SDL_GLContext gContext;
 
-float angle = 0;
+float gAngle = 90;
+float gFov = 60;
+float gAngleInc = glm::radians(gFov / (float)SCREEN_WIDTH);
 
 bool init();
 bool initGL();
@@ -57,7 +59,7 @@ void renderMap();
 void render();
 void printShaderLog(GLuint shader);
 void drawQuad(glm::vec2 pos, glm::vec2 size, glm::vec3 color);
-void drawRay();
+void drawRay(float angle, int segment);
 
 int main(int argc, char* argv[])
 {
@@ -65,7 +67,7 @@ int main(int argc, char* argv[])
     {
         bool quit = false;
         SDL_Event e;
-        
+
         while(!quit)
         {
             while(SDL_PollEvent(&e))
@@ -75,9 +77,10 @@ int main(int argc, char* argv[])
                     quit = true;
                 }
             }
-
+        
             render();
             SDL_GL_SwapWindow(gWindow);
+            gAngle += 1;
         }
     }
 
@@ -200,7 +203,7 @@ bool initGL()
         return false;
     }
 
-    glm::mat4 projection = glm::ortho(0.0f, 1024.0f, 512.0f, 0.0f, -1.0f, 1.0f);
+    glm::mat4 projection = glm::ortho(0.0f, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT, 0.0f, -1.0f, 1.0f);
 
     glUseProgram(gProgramID);
 
@@ -247,7 +250,65 @@ void renderMap()
         }
     }
 
-    drawRay();
+    float angle = glm::radians(gAngle - (gFov / 2));
+    
+    for(int i = 0; i <= SCREEN_WIDTH; ++i)
+    {
+        drawRay(angle, i);
+        angle += gAngleInc;
+    }
+}
+
+void drawRay(float angle, int segment)
+{
+    int quadWidth  = SCREEN_WIDTH / MAP_WIDTH;
+    int quadHeight = SCREEN_HEIGHT / MAP_HEIGHT;
+
+    float posX = 2.0f;
+    float posY = 5.0f;
+
+    glViewport(0, 0, 512, 512);
+    drawQuad(glm::vec2(posX * quadWidth, posY * quadHeight), glm::vec2(10.0f, 5.0f), glm::vec3(1.0, 1.0, 1.0));
+
+    for(float r = 0; r < 20; r += 0.1f)
+    {
+        float rayX = posX + r * glm::cos(angle);
+        float rayY = posY + r * glm::sin(angle);
+
+        if(mapLayout[(int)rayY * MAP_HEIGHT + (int)rayX] != ' ')
+        {
+            int wallColor = mapLayout[(int)rayY * MAP_HEIGHT + (int)rayX] - '0';
+            glm::vec3 color;
+
+            switch(wallColor)
+            {
+                case 0:
+                    color = glm::vec3(1.0f, 0.5f, 0.5f);
+                    break;
+                case 1:
+                    color = glm::vec3(0.7f, 0.3f, 0.5f);
+                    break;
+                case 2:
+                    color = glm::vec3(0.4f, 0.3f, 0.7f);
+                    break;
+                case 3:
+                    color = glm::vec3(0.8f, 1.0f, 0.7f);
+                    break;
+            }
+
+            glViewport(512, 0, 512, 512);
+
+            float height = (float)SCREEN_HEIGHT / r;
+            drawQuad(glm::vec2(segment, (float)SCREEN_HEIGHT / 2 - (height / 2)), glm::vec2(1, height), color); 
+
+            break;
+        }
+        else
+        {
+            glViewport(0, 0, 512, 512);
+            drawQuad(glm::vec2(rayX * quadWidth, rayY * quadHeight), glm::vec2(5.0f, 2.5f), glm::vec3(1.0, 0.0, 0.0));
+        }
+    }
 }
 
 void render()
@@ -299,26 +360,3 @@ void drawQuad(glm::vec2 pos, glm::vec2 size, glm::vec3 color)
     glUseProgram(0);
 }
 
-void drawRay()
-{
-    int quadWidth  = SCREEN_WIDTH / MAP_WIDTH;
-    int quadHeight = SCREEN_HEIGHT / MAP_HEIGHT;
-
-    float posX = 3.5f;
-    float posY = 5.4f;
-
-    drawQuad(glm::vec2(posX * quadWidth, posY * quadHeight), glm::vec2(10.0f, 5.0f), glm::vec3(1.0, 1.0, 1.0));
-
-    for(float r = 0; r < 20; r += .15f)
-    {
-        float rayX = posX + r * glm::cos(angle);
-        float rayY = posY + r * glm::sin(angle);
-
-        if(mapLayout[(int)rayY * MAP_HEIGHT + (int)rayX] != ' ') break;
-
-        drawQuad(glm::vec2(rayX * quadWidth, rayY * quadHeight), glm::vec2(5.0f, 2.5f), glm::vec3(1.0, 0.0, 0.0));
-    }
-
-    angle += (glm::pi<float>() / 360);
-    printf("%f\n", angle);
-}
