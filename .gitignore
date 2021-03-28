@@ -1,4 +1,3 @@
 .cache
 build/clangd/**
 build/debug/**
-extern

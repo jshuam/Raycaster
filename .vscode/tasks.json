@@ -3,12 +3,10 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"label": "[DEBUG] MinGW 64 CMake",
-			"command": "C:/msys64/mingw64/bin/cmake.exe",
+			"label": "[DEBUG] Generate Makefiles",
+			"command": "cmake",
 			"args": [
 				"-DCMAKE_BUILD_TYPE=Debug",
-				"-G",
-				"'MSYS Makefiles'",
 				"../.."
 			],
 			"options": {
@@ -18,8 +16,8 @@
 		},
 		{
 			"type": "shell",
-			"label": "MinGW 64 Make",
-			"command": "C:/msys64/mingw64/bin/mingw32-make.exe",
+			"label": "[DEBUG] Build",
+			"command": "make",
 			"options": {
 				"cwd": "${workspaceFolder}/build/debug"
 			},
@@ -32,11 +30,9 @@
 		{
 			"type": "shell",
 			"label": "Generate compile_commands.json",
-			"command": "C:/msys64/mingw64/bin/cmake.exe",
+			"command": "cmake",
 			"args": [
 				"-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
-				"-G",
-				"'MinGW Makefiles'",
 				"../.."
 			],
 			"options": {
