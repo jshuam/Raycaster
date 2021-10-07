@@ -1,12 +1,17 @@
-#include "SDL_keycode.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
+#include <SDL_stdinc.h>
+
+#include <memory>
+#include <string>
 #include <stdio.h>
 #include <vector>
+
+#include "Unit.hpp"
 
 const int SCREEN_WIDTH = 1024;
 const int SCREEN_HEIGHT = 512;
@@ -51,11 +56,11 @@ GLuint colorLoc = 0;
 SDL_Window* gWindow;
 SDL_GLContext gContext;
 
-float gPosX = 2.0f;
-float gPosY = 5.0f;
-float gAngle = 90;
-float gFov = 60;
-float gAngleInc = glm::radians(gFov / (float)SCREEN_WIDTH);
+std::unique_ptr<Unit> gPlayer;
+
+const float gFov = 60;
+const float gFovRad = glm::radians(gFov);
+const float gAngleInc = glm::radians(gFov / (float)SCREEN_WIDTH);
 
 std::vector<glm::vec4> *activeVertexBuffer;
 std::vector<glm::vec3> *activeColorBuffer;
@@ -84,8 +89,16 @@ int main(int argc, char* argv[])
 {
     if(init())
     {
+    	gPlayer = std::make_unique<Unit>(Unit{{2.0f, 2.0f}, {10.0f, 5.f}, glm::radians(90.0f)});
+    	Uint32 prevFrameTicks, frameTicks, startTime, endTime;
+    	int frames = 0, fps = 0;
+    	float frameTime, speed = 0.05f;
         bool quit = false;
         SDL_Event e;
+
+		float walk = 0, strafe = 0, turn = 0;
+
+        startTime = prevFrameTicks = SDL_GetTicks();
 
         while(!quit)
         {
@@ -97,9 +110,55 @@ int main(int argc, char* argv[])
                 }
             }
 
+			const Uint8* keyStates = SDL_GetKeyboardState(NULL);
+
+			if (keyStates[SDL_SCANCODE_LEFT]) turn = -1;
+			if (keyStates[SDL_SCANCODE_RIGHT]) turn = 1;
+			if (keyStates[SDL_SCANCODE_W]) walk = 1;
+			if (keyStates[SDL_SCANCODE_S]) walk = -1;
+			if (keyStates[SDL_SCANCODE_A]) strafe = -1;
+			if (keyStates[SDL_SCANCODE_D]) strafe = 1;
+
+			glm::vec2 orientation = glm::vec2(glm::cos(gPlayer->getAngle()), glm::sin(gPlayer->getAngle()));
+
+			if (walk != 0) 
+			{
+				gPlayer->move(walk * orientation * speed);
+				walk = 0;
+			}
+			if (turn != 0) 
+			{
+				gPlayer->turn(turn * 0.02745);
+				turn = 0;
+			}
+			if (strafe != 0) 
+			{
+				float ra = glm::radians(90.f);
+				glm::vec2 perp = glm::vec2(glm::cos(gPlayer->getAngle() + ra), glm::sin(gPlayer->getAngle() + ra));
+				gPlayer->move(strafe * perp * speed);
+				strafe = 0;
+			}
+
             render();
             SDL_GL_SwapWindow(gWindow);
-            gAngle += 0.5;
+
+			endTime = frameTicks = SDL_GetTicks();
+			frameTime = (frameTicks - prevFrameTicks) / 1000.0f;
+			prevFrameTicks = frameTicks;
+			frames++;
+
+			std::string title("Frame time: " + std::to_string(frameTime));
+
+			if (startTime - endTime >= 1000.0f)
+			{
+				fps = frames;
+				frames = 0;
+				startTime = 0;
+			}
+
+			title += " FPS: " + std::to_string(fps);				
+
+        	SDL_SetWindowTitle(gWindow, title.c_str());
         }
     }
 
@@ -307,27 +366,34 @@ void drawRays()
     int quadWidth  = SCREEN_WIDTH / MAP_WIDTH;
     int quadHeight = SCREEN_HEIGHT / MAP_HEIGHT;
 
-    float playerAngle = glm::radians(gAngle);
-    float angle = glm::radians(gAngle - (gFov / 2));
+    float angle = gPlayer->getAngle() - (gFovRad / 2);
 
     glViewport(0, 0, 512, 512);
-    drawQuad(glm::vec2(gPosX * quadWidth, gPosY * quadHeight), glm::vec2(10.0f, 5.0f), glm::vec3(1.0, 1.0, 1.0));
-    glViewport(512, 0, 512, 512);
 
+	float playerWidth = 10.0f;
+	float playerHeight = 5.0f;
+
+    // Draw the player dot on minimap
+    drawQuad(glm::vec2((gPlayer->getPos().x * quadWidth) - playerWidth / 2, 
+    				   (gPlayer->getPos().y * quadHeight) - playerHeight / 2), 
+    	     glm::vec2(playerWidth, playerHeight), 
+    	     glm::vec3(1.0, 1.0, 1.0));
+
+    glViewport(512, 0, 512, 512);
 
     for(int i = 0; i <= SCREEN_WIDTH; ++i)
     {
         for(float r = 0; r < 20; r += 0.01f)
         {
-            float rayX = gPosX + r * glm::cos(angle);
-            float rayY = gPosY + r * glm::sin(angle);
+            float rayX = gPlayer->getPos().x + r * glm::cos(angle);
+            float rayY = gPlayer->getPos().y + r * glm::sin(angle);
 
             if(mapLayout[(int)rayY * MAP_HEIGHT + (int)rayX] != ' ')
             {
                 // Store ray on hit
                 activeVertexBuffer = &rays;
                 activeColorBuffer = &rayColors;
-                glm::vec2 start(gPosX * quadWidth, gPosY * quadHeight);
+                glm::vec2 start(gPlayer->getPos().x * quadWidth, gPlayer->getPos().y * quadHeight);
                 glm::vec2 end(rayX * quadWidth, rayY * quadHeight);
                 drawLine(std::move(start), std::move(end), glm::vec3(1.0, 0.0, 0.0));
 
@@ -353,7 +419,7 @@ void drawRays()
                 activeVertexBuffer = &walls;
                 activeColorBuffer  = &wallColors;
 
-                float height = (float)SCREEN_HEIGHT / r;
+                float height = (float)SCREEN_HEIGHT / (r * glm::cos(angle - gPlayer->getAngle()));
                 drawQuad(glm::vec2(i, (float)SCREEN_HEIGHT / 2 - (height / 2)), glm::vec2(1, height), color); 
 
                 break;
